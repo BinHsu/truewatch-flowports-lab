@@ -7,7 +7,7 @@ Key 1: trace_id. The client's traceparent is captured on the wire by NetFlowScou
        span, and carried by the Beacon finding.
 Key 2: client IP + client source port (span peer address vs. the wire event), for traffic without trace context.
 Key 3: the device (CEF) line has neither: client IP + path before '?' + nearest device time (rt) to the span.
-TrueWatch holds the same records; queries/join.dql is the console version of the same three steps.
+TrueWatch holds the same records; queries/README.md has the console version of the same three steps.
 """
 import argparse
 import json
@@ -62,7 +62,10 @@ for tid in tids:
         print("  span    none")
         continue
     so, s = sp[0]
-    ip, port = g(s, "client_address", "client.address"), g(s, "network_peer_port", "network.peer.port")
+    # Java spans use the current OTel names (client.address, network.peer.port); Beacon Python 1.2.7 spans the older
+    # net.peer.ip / net.peer.port.
+    ip = g(s, "client_address", "client.address", "net_peer_ip", "net.peer.ip")
+    port = g(s, "network_peer_port", "network.peer.port", "net_peer_port", "net.peer.port")
     route = path0(g(s, "http_route", "http.route", "http.target"))
     f = [(o, j) for o, j in finds if g(j, "trace_id") == tid and g(j, "server_span_id", "span_id") == g(s, "span_id")]
     w2 = [(o, j) for o, j in wire if g(j, "client_ip") == ip and str(g(j, "client_port")) == str(port)]

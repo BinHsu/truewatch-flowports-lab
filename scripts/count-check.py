@@ -4,8 +4,8 @@
     python3 scripts/count-check.py
 
 Prints the topic end offset, then, per flow, how many points FlowPorts reports as sent to each destination,
-and any capacity drops or exhausted retries. The third number, rows in TrueWatch, comes from queries/count.dql
-in the console. Run it after traffic has stopped and both branches show pending 0.
+and any capacity drops or exhausted retries. The third number, rows in TrueWatch, comes from the count queries in
+queries/README.md. Run it after traffic has stopped, both branches show pending 0, and about 30 s more (DataKit batches).
 
 FlowPorts' `sent` counters belong to the running flow version: republishing a flow (for example
 flowports-setup.py --map-direct-spans) or restarting FlowPorts starts them again from 0, while the topic keeps its

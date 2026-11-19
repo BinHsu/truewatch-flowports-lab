@@ -1,7 +1,7 @@
 # One attack, three views, one pipeline: the lab.
 # Order: scripts/fetch-vendor.sh -> docker compose up -d kafka kafka-init flowports -> scripts/flowports-setup.py
 #        -> docker compose up -d datakit app nfs -> docker compose run --rm client
-# APP_LANG (java|python) and ROUTE (a|b) come from .env. After changing either: docker compose up -d --force-recreate app nfs
+# APP_LANG (java|python) and ROUTE (a|b) come from .env. After changing either: docker compose up -d --build --force-recreate app nfs
 name: flowports-lab
 
 networks:

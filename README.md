@@ -29,7 +29,7 @@ copied into this repository.
 |---|---|
 | Machine | linux/arm64 containers. Measured on Apple silicon with colima (VM: 4 CPU, 8 GiB, 30 GiB disk). amd64 was **not tested**: the download hashes and the Python lock below are arm64. |
 | Docker | Docker Engine with Compose v2.24 or later (`env_file` with `required: false`). |
-| colima | If `colima start` refuses because `kubectl` is missing (a profile with Kubernetes enabled), install `kubectl`, use a profile without Kubernetes, or start the VM directly with `limactl start colima-<profile>` (what we did) and set `DOCKER_HOST=unix://$HOME/.colima/<profile>/docker.sock`. Kubernetes itself is not used. |
+| colima | If `colima start` refuses because `kubectl` is missing (a profile with Kubernetes enabled), install `kubectl`, use a profile without Kubernetes, or start the VM directly with `LIMA_HOME=$HOME/.colima/_lima limactl start colima-<profile>` (what we did; without `LIMA_HOME`, `limactl` does not see colima's VMs) and `export DOCKER_HOST=unix://$HOME/.colima/<profile>/docker.sock` in every shell you use: the scripts call `docker compose` too. Stop it afterwards with `LIMA_HOME=$HOME/.colima/_lima limactl stop colima-<profile>`. Kubernetes itself is not used. |
 | Tools on the host | `curl`, `python3` (3.9+), `sha256sum` or `shasum`. |
 | TrueWatch | A workspace you may write test data to. Console: **Integrations > FlowPorts** shows the DataWay address and the workspace token. A full run writes a few thousand rows. |
 | Disk | About 5 GB of images (the DataKit image alone is 2.6 GB on arm64). |
@@ -65,11 +65,15 @@ python3 scripts/flowports-setup.py
 # 4. DataKit, the app (Java by default) and NetFlowScout
 docker compose up -d --build datakit app nfs
 
-# 5. The probe: 3 requests (benign; SQL injection with a sqlmap user agent and a JNDI header; JNDI in a parameter)
+# 5. The probe: 3 requests (benign; SQL injection with a sqlmap user agent and a JNDI header; JNDI in a parameter).
+#    ROUTE here is the probe marker: two hex characters written into every trace id (5eed<marker>...) and CEF run
+#    name (lab-<marker>). It is not the ROUTE in .env, which picks the app's route.
 mkdir -p out && docker compose run --rm -e ROUTE=a1 client | tee out/probe-a1.txt
 ```
 
-Give TrueWatch a minute or two to show the rows, then follow `queries/README.md`. The same records are in Kafka:
+Give TrueWatch a minute or two to show the rows, then follow `queries/README.md`. The same records are in Kafka (wait
+about 30 s after the probe before `count-check.py`: DataKit sends in batches, and an early run can read the topic
+before the last points arrive):
 
 ```bash
 scripts/kafka-dump.sh
@@ -83,7 +87,10 @@ The FlowPorts management UI is on http://127.0.0.1:18080 (the admin password is 
 ### Python instead of Java, route B instead of route A
 
 Set `APP_LANG=python` and/or `ROUTE=b` in `.env`, then `docker compose up -d --build --force-recreate app nfs`.
-NetFlowScout lives in the app's network namespace, so recreate both together. Use a new probe marker, e.g. `ROUTE=b1`.
+NetFlowScout lives in the app's network namespace, so recreate both together. The Python image installs its wheels from
+PyPI with `--require-hashes`, so the build needs PyPI access. Give each probe run a new marker, e.g.
+`docker compose run --rm -e ROUTE=b1 client`, and pass the same marker to `join-kafka.py` (`--trace-prefix 5eedb1
+--cef-run lab-b1`).
 
 - **Route A** (default): app → DataKit 2.19.1 → FlowPorts `datakit` source. Beacon findings arrive in TrueWatch as
   **security events** (`E::`, `df_source = beacon_security`) whose `server_span_id` points at the request span, and
@@ -109,6 +116,7 @@ scripts/kafka-dump.sh && python3 scripts/kafka-check.py out/kafka-dump.txt --dri
 | Count | topic offsets 0–1114, contiguous: **1115 records** in Kafka and **1115 rows** in TrueWatch, equal per flow and per category. In a smaller earlier run, FlowPorts' `sent` counter per destination matched the receiver (37 = 37) |
 | Kafka stopped for 1 min 59 s | TrueWatch branch stayed `normal`; Kafka branch went `retrying` → `unhealthy`, peaked at 145 pending, caught up 31–34 s after Kafka returned. 240/240 per signal on both sides, 0 duplicates, 0 drops |
 | Broker killed (SIGKILL) 7 times under load | 0 duplicates in Kafka and TrueWatch |
+| This repository, end to end, with the TrueWatch destination (route A, Java then Python) | story probe joined 3/3 per app in TrueWatch and in Kafka (trace id; IP + source port; device line by IP + path); device row time equal to `rt` 6/6; Kafka end offset = FlowPorts `sent` per destination = TrueWatch rows: **37 = 37 = 37**, equal per flow. Then the drill (Python app): 240/240 CEF lines in Kafka and in TrueWatch, 0 duplicates; 999 records = 999 `sent` to each destination; TrueWatch 995 `L`/`T`/`E` rows = 995 such records, and 2 `CO` objects = 2 object names (4 SBOM records) |
 | This repository, end to end (Java app, `--kafka-only`) | story probe joined 3/3 on route A and on route B; device row time equal to `rt`; Kafka end offset = FlowPorts `sent` (22 = 22); drill 240/240 CEF lines in Kafka, 0 duplicates, offsets contiguous |
 
 ## Things to know

@@ -1,6 +1,7 @@
 # DQL for the lab
 
-Run these in the TrueWatch console (Query Tools / DQL query). Each one passed the DQL syntax checker. Replace the trace id,
+Run these in the TrueWatch console (Query Tools / DQL query). Each one was run against a TrueWatch workspace on 2026-11-19 (route A, Java and
+Python, and the drill) and returned the rows described here. Replace the trace id,
 the client IP and the port with values from your own run: the probe prints its trace ids and client IP, and step 1
 returns the span's `client_address` and `network_peer_port`.
 
@@ -12,22 +13,22 @@ them explicitly returned them.
 Step 1, trace id: the wire event, the app span and the Beacon finding share it.
 
 ```
-L::re(`.*`):(time, __docid, source, collectway_flow, trace_id, span_id, client_ip, client_port, http_path, user_agent) { trace_id = '5eeda2000000000000000000000002' } [30m]
+L::re(`.*`):(time, __docid, source, collectway_flow, trace_id, span_id, client_ip, client_port, http_path, user_agent) { trace_id = '5eeda100000000000000000000000002' } [30m]
 ```
 
 ```
-T::re(`.*`):(time, __docid, service, resource, status, span_id, trace_id, client_address, network_peer_port) { trace_id = '5eeda2000000000000000000000002' } [30m]
+T::re(`.*`):(time, __docid, service, resource, status, span_id, trace_id, client_address, network_peer_port, net_peer_ip, net_peer_port) { trace_id = '5eeda100000000000000000000000002' } [30m]
 ```
 
 ```
-E::re(`.*`):(time, __docid, rule, trace_id, server_span_id, occurrence_id) { df_source = 'beacon_security' and trace_id = '5eeda2000000000000000000000002' } [30m]
+E::re(`.*`):(time, __docid, rule, trace_id, server_span_id, occurrence_id) { df_source = 'beacon_security' and trace_id = '5eeda100000000000000000000000002' } [30m]
 ```
 
 The finding's `server_span_id` is the server span's `span_id` (route A). On route B the finding is a log row in
 `L::otel_log` and carries `span_id` instead.
 
 Step 2, client IP + source port, for traffic without a traceparent: use the span's `client_address` and
-`network_peer_port`.
+`network_peer_port` (Java). Beacon Python spans carry the older names `net_peer_ip` and `net_peer_port` instead.
 
 ```
 L::netflowscout:(time, __docid, trace_id, client_ip, client_port, http_path, user_agent) { client_ip = '192.0.2.10' and client_port = 49152 } [30m]
@@ -44,6 +45,11 @@ L::socket:(time, __docid, cef_sig, cef_name, client_ip, http_path, user_agent, s
 
 Rows per flow, to compare with the Kafka end offset and FlowPorts `sent` (`scripts/count-check.py`). Add the four
 results per flow.
+
+`CO::` holds objects, not points: a later point for the same object replaces the earlier one. The app re-sends its
+SBOM object (`tracing_service`) every 5 minutes, so in a run longer than that Kafka has more `custom_object` records
+than `CO::` has rows. Compare `CO::` with the number of distinct object names in Kafka, and `L::` + `T::` + `E::` with
+the other records.
 
 ```
 L::re(`.*`):(count(*)) { collectway_flow = re('lab-.*') } [1h] by collectway_flow

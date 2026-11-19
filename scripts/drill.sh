@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Kafka-down drill: 240 requests at 1/s (one CEF line each); Kafka is stopped at +60 s and started at +180 s.
 # FlowPorts delivery state is sampled every 10 s into out/drill-delivery.txt; the timeline goes to out/drill-timeline.txt.
-# Afterwards: scripts/kafka-dump.sh, then scripts/kafka-check.py out/kafka-dump.txt --drill lab-d1, and queries/drill.dql.
+# Afterwards: scripts/kafka-dump.sh, then scripts/kafka-check.py out/kafka-dump.txt --drill lab-d1, and the drill query in queries/README.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p out
