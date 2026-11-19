@@ -136,7 +136,6 @@ scripts/kafka-dump.sh && python3 scripts/kafka-check.py out/kafka-dump.txt --dri
   NAT and proxies were not tested; there the port is shared or rewritten.
 - The probe stamps the CEF `rt` with its own send time, so device-to-span gaps measure the generator, not a device.
 
-<!-- OWNER REVIEW: tell Sam before publishing -->
 ## Known behaviours (FlowPorts 0.5.6)
 
 - **Socket source under Kafka back-pressure.** In one drill (broker killed 5 times, 4–6 s each, about 12 s apart, with
