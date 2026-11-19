@@ -1,0 +1,26 @@
+rule "lab_http_request" do
+  on "http.request"
+  where not incomplete
+  when http.method == "GET"
+  emit "lab.http_request" do
+    severity = "info"
+    message = "HTTP request seen on the wire"
+    path = http.path
+    request_headers = http.request_headers
+    client_ip = source.ip
+    client_port = source.port
+    query = http.query
+  end
+end
+rule "lab_http_transaction" do
+  on "http.transaction"
+  where not incomplete
+  when http.method == "GET"
+  emit "lab.http_transaction" do
+    severity = "info"
+    message = "HTTP transaction seen on the wire"
+    status = http.status
+    duration_ms = duration_ms
+    path = http.path
+  end
+end

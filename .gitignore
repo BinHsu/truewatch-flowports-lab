@@ -1,0 +1,10 @@
+# secrets and local state: never commit
+.env
+.lab/
+certs/*.pem
+# third-party downloads (fetched and hash-checked by scripts/fetch-vendor.sh, never redistributed)
+vendor/
+app/java/lib/
+# run output
+out/
+__pycache__/

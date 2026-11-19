@@ -1,0 +1,59 @@
+{
+ "sensor_id": "flowports-lab",
+ "service": "lab-app",
+ "socket": "/work/run/ingest.sock",
+ "stream_socket": "/work/run/streams.sock",
+ "metrics": "127.0.0.1:9710",
+ "rules": [
+  "/cfg/rules.nfs"
+ ],
+ "plugins": [
+  "/opt/nfs/plugins"
+ ],
+ "capture": {
+  "application_source": "network",
+  "filter": "tcp port 8080",
+  "interface": "eth0"
+ },
+ "queue": {
+  "path": "/work/var/events.wal",
+  "max_bytes": 16777216
+ },
+ "file": {
+  "enabled": true,
+  "path": "/work/var/events.ndjson",
+  "max_bytes": 4194304,
+  "keep": 2
+ },
+ "dataway": {
+  "enabled": true,
+  "url": "http://flowports:8081/ingest/lab-nfs",
+  "token_env": "NETFLOWSCOUT_DATAWAY_TOKEN"
+ },
+ "privacy": {
+  "raw_fields": {
+   "lab-app": [
+    "http.request_headers",
+    "http.path",
+    "http.query",
+    "source.ip"
+   ]
+  }
+ },
+ "business": {
+  "enabled": true,
+  "max_series": 256
+ },
+ "verification": {
+  "enabled": false
+ },
+ "http": {
+  "request_events": true,
+  "headers": [
+   "traceparent",
+   "user-agent",
+   "x-api-version"
+  ],
+  "query_keys": []
+ }
+}
